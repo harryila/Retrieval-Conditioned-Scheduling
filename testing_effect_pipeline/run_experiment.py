@@ -117,7 +117,7 @@ def run(args: argparse.Namespace) -> dict:
 
     out: dict = {}
 
-    for seed in range(args.seeds):
+    for seed in range(args.seed_start, args.seed_start + args.seeds):
         seed_key = f"seed_{seed}"
         out[seed_key] = {}
 
@@ -212,6 +212,12 @@ def parse_args() -> argparse.Namespace:
     p.add_argument("--batch-size", type=int, default=16)
     p.add_argument("--eval-every", type=int, default=500)
     p.add_argument("--seeds", type=int, default=3)
+    p.add_argument(
+        "--seed-start",
+        type=int,
+        default=0,
+        help="Starting seed value (default 0). Combined with --seeds, runs seeds [start, start+seeds).",
+    )
     p.add_argument("--scheduler", choices=["leitner", "fsrs", "random_matched", "random_wide"], default="leitner")
     p.add_argument("--max-training-tokens", type=int, default=None)
     p.add_argument(
