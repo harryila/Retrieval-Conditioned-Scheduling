@@ -1,0 +1,118 @@
+2026-05-05 18:17:24,948 INFO testing_effect_pipeline.real_model: Loading tokenizer: Qwen/Qwen2.5-0.5B-Instruct
+2026-05-05 18:17:25,820 INFO testing_effect_pipeline.real_model: Loading model: Qwen/Qwen2.5-0.5B-Instruct  dtype=bfloat16  device=cuda
+`torch_dtype` is deprecated! Use `dtype` instead!
+2026-05-05 18:17:26,926 INFO testing_effect_pipeline.real_model: LoRA applied: 1,081,344 trainable / 495,114,112 total params (0.22%)
+2026-05-05 18:17:26,928 INFO __main__: Calibrating item difficulty from real model (10000 items)...
+2026-05-05 18:17:41,225 INFO __main__:   calibrated 500 / 10000
+2026-05-05 18:17:55,190 INFO __main__:   calibrated 1000 / 10000
+2026-05-05 18:18:09,142 INFO __main__:   calibrated 1500 / 10000
+2026-05-05 18:18:23,118 INFO __main__:   calibrated 2000 / 10000
+2026-05-05 18:18:37,073 INFO __main__:   calibrated 2500 / 10000
+2026-05-05 18:18:51,050 INFO __main__:   calibrated 3000 / 10000
+2026-05-05 18:19:05,015 INFO __main__:   calibrated 3500 / 10000
+2026-05-05 18:19:18,978 INFO __main__:   calibrated 4000 / 10000
+2026-05-05 18:19:32,933 INFO __main__:   calibrated 4500 / 10000
+2026-05-05 18:19:46,895 INFO __main__:   calibrated 5000 / 10000
+2026-05-05 18:20:00,844 INFO __main__:   calibrated 5500 / 10000
+2026-05-05 18:20:14,847 INFO __main__:   calibrated 6000 / 10000
+2026-05-05 18:20:28,848 INFO __main__:   calibrated 6500 / 10000
+2026-05-05 18:20:42,901 INFO __main__:   calibrated 7000 / 10000
+2026-05-05 18:20:57,003 INFO __main__:   calibrated 7500 / 10000
+2026-05-05 18:21:10,959 INFO __main__:   calibrated 8000 / 10000
+2026-05-05 18:21:24,944 INFO __main__:   calibrated 8500 / 10000
+2026-05-05 18:21:38,921 INFO __main__:   calibrated 9000 / 10000
+2026-05-05 18:21:52,901 INFO __main__:   calibrated 9500 / 10000
+2026-05-05 18:22:06,879 INFO __main__:   calibrated 10000 / 10000
+2026-05-05 18:22:06,880 INFO __main__: === seed=1  method=standard_ft ===
+2026-05-05 18:22:06,884 INFO testing_effect_pipeline.real_model: LoRA adapter reset for new run
+The following generation flags are not valid and may be ignored: ['temperature', 'top_p', 'top_k']. Set `TRANSFORMERS_VERBOSITY=info` for more details.
+2026-05-05 18:24:17,024 INFO testing_effect_pipeline.baselines: step 50/4000 | studied=16 tested=8 reinforced=0 mastered=0 | train_tokens=9098
+2026-05-05 18:26:22,614 INFO testing_effect_pipeline.baselines: step 100/4000 | studied=16 tested=8 reinforced=0 mastered=0 | train_tokens=18310
+2026-05-05 18:28:27,812 INFO testing_effect_pipeline.baselines: step 150/4000 | studied=16 tested=8 reinforced=0 mastered=1 | train_tokens=27494
+2026-05-05 18:30:34,357 INFO testing_effect_pipeline.baselines: step 200/4000 | studied=16 tested=8 reinforced=0 mastered=3 | train_tokens=36670
+2026-05-05 18:32:40,755 INFO testing_effect_pipeline.baselines: step 250/4000 | studied=16 tested=8 reinforced=0 mastered=4 | train_tokens=45850
+2026-05-05 18:34:46,884 INFO testing_effect_pipeline.baselines: step 300/4000 | studied=16 tested=8 reinforced=0 mastered=4 | train_tokens=54891
+2026-05-05 18:36:53,299 INFO testing_effect_pipeline.baselines: step 350/4000 | studied=16 tested=8 reinforced=0 mastered=6 | train_tokens=64053
+2026-05-05 18:39:00,165 INFO testing_effect_pipeline.baselines: step 400/4000 | studied=16 tested=8 reinforced=0 mastered=7 | train_tokens=73217
+2026-05-05 18:41:04,309 INFO testing_effect_pipeline.baselines: step 450/4000 | studied=16 tested=8 reinforced=0 mastered=11 | train_tokens=82316
+2026-05-05 18:43:13,369 INFO testing_effect_pipeline.baselines: step 500/4000 | studied=16 tested=8 reinforced=0 mastered=12 | train_tokens=91436
+2026-05-05 18:51:07,201 INFO testing_effect_pipeline.baselines:   periodic uniform eval: 297/10000 (3.0%)
+2026-05-05 18:53:13,929 INFO testing_effect_pipeline.baselines: step 550/4000 | studied=16 tested=8 reinforced=0 mastered=14 | train_tokens=100552
+2026-05-05 18:55:20,282 INFO testing_effect_pipeline.baselines: step 600/4000 | studied=16 tested=8 reinforced=0 mastered=16 | train_tokens=109622
+2026-05-05 18:57:30,444 INFO testing_effect_pipeline.baselines: step 650/4000 | studied=16 tested=8 reinforced=0 mastered=16 | train_tokens=118722
+2026-05-05 18:59:35,523 INFO testing_effect_pipeline.baselines: step 700/4000 | studied=16 tested=8 reinforced=0 mastered=20 | train_tokens=127828
+2026-05-05 19:01:38,023 INFO testing_effect_pipeline.baselines: step 750/4000 | studied=16 tested=8 reinforced=0 mastered=25 | train_tokens=136964
+2026-05-05 19:03:40,986 INFO testing_effect_pipeline.baselines: step 800/4000 | studied=16 tested=8 reinforced=0 mastered=27 | train_tokens=146254
+2026-05-05 19:05:47,062 INFO testing_effect_pipeline.baselines: step 850/4000 | studied=16 tested=8 reinforced=0 mastered=29 | train_tokens=155368
+2026-05-05 19:07:51,532 INFO testing_effect_pipeline.baselines: step 900/4000 | studied=16 tested=8 reinforced=0 mastered=31 | train_tokens=164555
+2026-05-05 19:09:57,582 INFO testing_effect_pipeline.baselines: step 950/4000 | studied=16 tested=8 reinforced=0 mastered=34 | train_tokens=173596
+2026-05-05 19:12:04,557 INFO testing_effect_pipeline.baselines: step 1000/4000 | studied=16 tested=8 reinforced=0 mastered=35 | train_tokens=182749
+2026-05-05 19:19:27,047 INFO testing_effect_pipeline.baselines:   periodic uniform eval: 432/10000 (4.3%)
+2026-05-05 19:21:32,487 INFO testing_effect_pipeline.baselines: step 1050/4000 | studied=16 tested=8 reinforced=0 mastered=41 | train_tokens=191902
+2026-05-05 19:23:35,502 INFO testing_effect_pipeline.baselines: step 1100/4000 | studied=16 tested=8 reinforced=0 mastered=44 | train_tokens=200980
+2026-05-05 19:25:41,861 INFO testing_effect_pipeline.baselines: step 1150/4000 | studied=16 tested=8 reinforced=0 mastered=46 | train_tokens=210091
+2026-05-05 19:27:47,405 INFO testing_effect_pipeline.baselines: step 1200/4000 | studied=16 tested=8 reinforced=0 mastered=47 | train_tokens=219178
+2026-05-05 19:29:52,395 INFO testing_effect_pipeline.baselines: step 1250/4000 | studied=16 tested=8 reinforced=0 mastered=52 | train_tokens=228272
+2026-05-05 19:31:55,964 INFO testing_effect_pipeline.baselines: step 1300/4000 | studied=16 tested=8 reinforced=0 mastered=56 | train_tokens=237370
+2026-05-05 19:34:03,365 INFO testing_effect_pipeline.baselines: step 1350/4000 | studied=16 tested=8 reinforced=0 mastered=63 | train_tokens=246582
+2026-05-05 19:36:09,975 INFO testing_effect_pipeline.baselines: step 1400/4000 | studied=16 tested=8 reinforced=0 mastered=70 | train_tokens=255766
+2026-05-05 19:38:18,018 INFO testing_effect_pipeline.baselines: step 1450/4000 | studied=16 tested=8 reinforced=0 mastered=75 | train_tokens=264942
+2026-05-05 19:40:22,080 INFO testing_effect_pipeline.baselines: step 1500/4000 | studied=16 tested=8 reinforced=0 mastered=82 | train_tokens=274122
+2026-05-05 19:47:40,158 INFO testing_effect_pipeline.baselines:   periodic uniform eval: 618/10000 (6.2%)
+2026-05-05 19:49:46,063 INFO testing_effect_pipeline.baselines: step 1550/4000 | studied=16 tested=8 reinforced=0 mastered=87 | train_tokens=283163
+2026-05-05 19:52:00,080 INFO testing_effect_pipeline.baselines: step 1600/4000 | studied=16 tested=8 reinforced=0 mastered=90 | train_tokens=292325
+2026-05-05 19:54:06,504 INFO testing_effect_pipeline.baselines: step 1650/4000 | studied=16 tested=8 reinforced=0 mastered=97 | train_tokens=301489
+2026-05-05 19:56:17,724 INFO testing_effect_pipeline.baselines: step 1700/4000 | studied=16 tested=8 reinforced=0 mastered=105 | train_tokens=310588
+2026-05-05 19:58:30,299 INFO testing_effect_pipeline.baselines: step 1750/4000 | studied=16 tested=8 reinforced=0 mastered=108 | train_tokens=319708
+2026-05-05 20:00:39,217 INFO testing_effect_pipeline.baselines: step 1800/4000 | studied=16 tested=8 reinforced=0 mastered=116 | train_tokens=328824
+2026-05-05 20:02:49,683 INFO testing_effect_pipeline.baselines: step 1850/4000 | studied=16 tested=8 reinforced=0 mastered=126 | train_tokens=337894
+2026-05-05 20:04:59,836 INFO testing_effect_pipeline.baselines: step 1900/4000 | studied=16 tested=8 reinforced=0 mastered=129 | train_tokens=346994
+2026-05-05 20:07:10,653 INFO testing_effect_pipeline.baselines: step 1950/4000 | studied=16 tested=8 reinforced=0 mastered=129 | train_tokens=356100
+2026-05-05 20:09:15,769 INFO testing_effect_pipeline.baselines: step 2000/4000 | studied=16 tested=8 reinforced=0 mastered=136 | train_tokens=365236
+2026-05-05 20:16:58,969 INFO testing_effect_pipeline.baselines:   periodic uniform eval: 787/10000 (7.9%)
+2026-05-05 20:19:09,008 INFO testing_effect_pipeline.baselines: step 2050/4000 | studied=16 tested=8 reinforced=0 mastered=144 | train_tokens=374526
+2026-05-05 20:21:14,396 INFO testing_effect_pipeline.baselines: step 2100/4000 | studied=16 tested=8 reinforced=0 mastered=156 | train_tokens=383640
+2026-05-05 20:23:22,862 INFO testing_effect_pipeline.baselines: step 2150/4000 | studied=16 tested=8 reinforced=0 mastered=171 | train_tokens=392827
+2026-05-05 20:25:29,418 INFO testing_effect_pipeline.baselines: step 2200/4000 | studied=16 tested=8 reinforced=0 mastered=174 | train_tokens=401868
+2026-05-05 20:27:36,432 INFO testing_effect_pipeline.baselines: step 2250/4000 | studied=16 tested=8 reinforced=0 mastered=181 | train_tokens=411021
+2026-05-05 20:29:42,048 INFO testing_effect_pipeline.baselines: step 2300/4000 | studied=16 tested=8 reinforced=0 mastered=187 | train_tokens=420174
+2026-05-05 20:31:47,194 INFO testing_effect_pipeline.baselines: step 2350/4000 | studied=16 tested=8 reinforced=0 mastered=194 | train_tokens=429252
+2026-05-05 20:33:53,483 INFO testing_effect_pipeline.baselines: step 2400/4000 | studied=16 tested=8 reinforced=0 mastered=201 | train_tokens=438363
+2026-05-05 20:36:00,115 INFO testing_effect_pipeline.baselines: step 2450/4000 | studied=16 tested=8 reinforced=0 mastered=212 | train_tokens=447450
+2026-05-05 20:38:08,305 INFO testing_effect_pipeline.baselines: step 2500/4000 | studied=16 tested=8 reinforced=0 mastered=218 | train_tokens=456544
+2026-05-05 20:45:31,133 INFO testing_effect_pipeline.baselines:   periodic uniform eval: 933/10000 (9.3%)
+2026-05-05 20:47:36,810 INFO testing_effect_pipeline.baselines: step 2550/4000 | studied=16 tested=8 reinforced=0 mastered=224 | train_tokens=465642
+2026-05-05 20:49:41,219 INFO testing_effect_pipeline.baselines: step 2600/4000 | studied=16 tested=8 reinforced=0 mastered=233 | train_tokens=474854
+2026-05-05 20:51:49,882 INFO testing_effect_pipeline.baselines: step 2650/4000 | studied=16 tested=8 reinforced=0 mastered=246 | train_tokens=484038
+2026-05-05 20:53:59,038 INFO testing_effect_pipeline.baselines: step 2700/4000 | studied=16 tested=8 reinforced=0 mastered=252 | train_tokens=493214
+2026-05-05 20:56:08,643 INFO testing_effect_pipeline.baselines: step 2750/4000 | studied=16 tested=8 reinforced=0 mastered=261 | train_tokens=502394
+2026-05-05 20:58:13,042 INFO testing_effect_pipeline.baselines: step 2800/4000 | studied=16 tested=8 reinforced=0 mastered=269 | train_tokens=511435
+2026-05-05 21:00:15,390 INFO testing_effect_pipeline.baselines: step 2850/4000 | studied=16 tested=8 reinforced=0 mastered=276 | train_tokens=520597
+2026-05-05 21:02:20,800 INFO testing_effect_pipeline.baselines: step 2900/4000 | studied=16 tested=8 reinforced=0 mastered=282 | train_tokens=529761
+2026-05-05 21:04:25,797 INFO testing_effect_pipeline.baselines: step 2950/4000 | studied=16 tested=8 reinforced=0 mastered=297 | train_tokens=538860
+2026-05-05 21:06:33,505 INFO testing_effect_pipeline.baselines: step 3000/4000 | studied=16 tested=8 reinforced=0 mastered=303 | train_tokens=547980
+2026-05-05 21:13:58,612 INFO testing_effect_pipeline.baselines:   periodic uniform eval: 1193/10000 (11.9%)
+2026-05-05 21:16:05,908 INFO testing_effect_pipeline.baselines: step 3050/4000 | studied=16 tested=8 reinforced=0 mastered=313 | train_tokens=557096
+2026-05-05 21:18:13,051 INFO testing_effect_pipeline.baselines: step 3100/4000 | studied=16 tested=8 reinforced=0 mastered=326 | train_tokens=566166
+2026-05-05 21:20:17,395 INFO testing_effect_pipeline.baselines: step 3150/4000 | studied=16 tested=8 reinforced=0 mastered=333 | train_tokens=575266
+2026-05-05 21:22:28,522 INFO testing_effect_pipeline.baselines: step 3200/4000 | studied=16 tested=8 reinforced=0 mastered=338 | train_tokens=584372
+2026-05-05 21:24:36,226 INFO testing_effect_pipeline.baselines: step 3250/4000 | studied=16 tested=8 reinforced=0 mastered=349 | train_tokens=593508
+2026-05-05 21:26:38,462 INFO testing_effect_pipeline.baselines: step 3300/4000 | studied=16 tested=8 reinforced=0 mastered=367 | train_tokens=602798
+2026-05-05 21:28:44,650 INFO testing_effect_pipeline.baselines: step 3350/4000 | studied=16 tested=8 reinforced=0 mastered=376 | train_tokens=611912
+2026-05-05 21:30:50,262 INFO testing_effect_pipeline.baselines: step 3400/4000 | studied=16 tested=8 reinforced=0 mastered=383 | train_tokens=621099
+2026-05-05 21:32:55,595 INFO testing_effect_pipeline.baselines: step 3450/4000 | studied=16 tested=8 reinforced=0 mastered=391 | train_tokens=630140
+2026-05-05 21:35:02,039 INFO testing_effect_pipeline.baselines: step 3500/4000 | studied=16 tested=8 reinforced=0 mastered=395 | train_tokens=639293
+2026-05-05 21:42:26,379 INFO testing_effect_pipeline.baselines:   periodic uniform eval: 1355/10000 (13.6%)
+2026-05-05 21:44:40,540 INFO testing_effect_pipeline.baselines: step 3550/4000 | studied=16 tested=8 reinforced=0 mastered=398 | train_tokens=648446
+2026-05-05 21:46:54,560 INFO testing_effect_pipeline.baselines: step 3600/4000 | studied=16 tested=8 reinforced=0 mastered=409 | train_tokens=657524
+2026-05-05 21:49:04,443 INFO testing_effect_pipeline.baselines: step 3650/4000 | studied=16 tested=8 reinforced=0 mastered=414 | train_tokens=666635
+2026-05-05 21:51:10,555 INFO testing_effect_pipeline.baselines: step 3700/4000 | studied=16 tested=8 reinforced=0 mastered=424 | train_tokens=675722
+2026-05-05 21:53:19,085 INFO testing_effect_pipeline.baselines: step 3750/4000 | studied=16 tested=8 reinforced=0 mastered=439 | train_tokens=684816
+2026-05-05 21:55:26,934 INFO testing_effect_pipeline.baselines: step 3800/4000 | studied=16 tested=8 reinforced=0 mastered=445 | train_tokens=693914
+2026-05-05 21:57:36,914 INFO testing_effect_pipeline.baselines: step 3850/4000 | studied=16 tested=8 reinforced=0 mastered=453 | train_tokens=703126
+2026-05-05 21:59:41,003 INFO testing_effect_pipeline.baselines: step 3900/4000 | studied=16 tested=8 reinforced=0 mastered=460 | train_tokens=712310
+2026-05-05 22:01:46,439 INFO testing_effect_pipeline.baselines: step 3950/4000 | studied=16 tested=8 reinforced=0 mastered=466 | train_tokens=721486
+2026-05-05 22:03:51,478 INFO testing_effect_pipeline.baselines: step 4000/4000 | studied=16 tested=8 reinforced=0 mastered=476 | train_tokens=730666
+2026-05-05 22:11:21,821 INFO testing_effect_pipeline.baselines:   periodic uniform eval: 1512/10000 (15.1%)
+2026-05-05 22:18:52,366 INFO __main__:   uniform eval: 1512 / 10000 correct (15.1%), mean_loss=1.4265
+Wrote metrics to artifacts_t7_10k_hard/set2_hard_10k_r16_standard_seed1.json
