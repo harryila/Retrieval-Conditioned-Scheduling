@@ -97,6 +97,14 @@ def run(args: argparse.Namespace) -> dict:
     else:
         items = build_sample_dataset(args.sample_size)
 
+    held_out_items = None
+    if getattr(args, "held_out_dataset_path", None):
+        held_out_items = load_closed_book_jsonl(args.held_out_dataset_path)
+        logger.info(
+            "Loaded held-out dataset: %d items from %s",
+            len(held_out_items), args.held_out_dataset_path,
+        )
+
     real_model = None
     if args.real:
         from .real_model import RealModelAdapter, RealModelConfig
@@ -191,7 +199,27 @@ def run(args: argparse.Namespace) -> dict:
                 eval_result.accuracy * 100, eval_result.mean_loss,
             )
 
-            out[seed_key][method] = _metrics_to_dict(metrics)
+            metrics_dict = _metrics_to_dict(metrics)
+
+            if held_out_items is not None:
+                held_out_result = run_uniform_eval(
+                    model, held_out_items, step=-1, include_per_item=True
+                )
+                logger.info(
+                    "  held-out eval: %d / %d correct (%.1f%%), mean_loss=%.4f",
+                    held_out_result.correct_count, held_out_result.total,
+                    held_out_result.accuracy * 100, held_out_result.mean_loss,
+                )
+                metrics_dict["held_out_eval_result"] = {
+                    "step": held_out_result.step,
+                    "correct_count": held_out_result.correct_count,
+                    "total": held_out_result.total,
+                    "accuracy": held_out_result.accuracy,
+                    "mean_loss": held_out_result.mean_loss,
+                    "per_item": held_out_result.per_item,
+                }
+
+            out[seed_key][method] = metrics_dict
 
     return out
 
@@ -205,6 +233,12 @@ def parse_args() -> argparse.Namespace:
 
     # Dataset
     p.add_argument("--dataset-path", type=str, default=None)
+    p.add_argument(
+        "--held-out-dataset-path",
+        type=str,
+        default=None,
+        help="Optional JSONL of held-out items. After training, runs uniform eval on these and stores under held_out_eval_result.",
+    )
     p.add_argument("--sample-size", type=int, default=200)
 
     # Experiment matrix

@@ -27,7 +27,7 @@ class BaselineTrainer:
     """Implements standard FT + random replay + curriculum + loss replay baselines."""
 
     def __init__(self, items: list[QAItem], model: ModelAdapter, cfg: BaselineConfig, policy: str, seed: int = 7):
-        if policy not in {"standard_ft", "random_replay", "curriculum", "loss_replay"}:
+        if policy not in {"standard_ft", "standard_ft_mastered", "random_replay", "curriculum", "loss_replay"}:
             raise ValueError("unknown baseline policy")
         self.items = items
         self.item_by_id = {i.item_id: i for i in items}
@@ -44,6 +44,15 @@ class BaselineTrainer:
             self.items = sorted(items, key=lambda x: x.difficulty if x.difficulty is not None else 1.0)
 
     def _study_items(self, n: int) -> list[QAItem]:
+        if self.policy == "standard_ft_mastered":
+            available = [it for it in self.items if not self.state[it.item_id].is_mastered]
+            if not available:
+                return []
+            out: list[QAItem] = []
+            for _ in range(n):
+                out.append(available[self.cursor % len(available)])
+                self.cursor += 1
+            return out
         out: list[QAItem] = []
         for _ in range(n):
             out.append(self.items[self.cursor % len(self.items)])
@@ -132,6 +141,11 @@ class BaselineTrainer:
                     self._probe(item, step)
                     test_count += 1
             elif self.policy == "standard_ft":
+                probe_items = self.rng.sample(self.items, k=min(self.cfg.replay_size, len(self.items)))
+                for item in probe_items:
+                    self._probe(item, step)
+                    test_count += 1
+            elif self.policy == "standard_ft_mastered":
                 probe_items = self.rng.sample(self.items, k=min(self.cfg.replay_size, len(self.items)))
                 for item in probe_items:
                     self._probe(item, step)
