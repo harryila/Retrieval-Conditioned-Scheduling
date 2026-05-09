@@ -41,6 +41,7 @@ class RealModelConfig:
     hf_token: Optional[str] = None
     gen_batch_size: int = 16
     system_prompt: str = "Answer the question with a short factual answer."
+    deterministic: bool = False
 
 
 class RealModelAdapter(ModelAdapter):
@@ -55,6 +56,15 @@ class RealModelAdapter(ModelAdapter):
     def __init__(self, config: RealModelConfig, device: Optional[str] = None) -> None:
         self.config = config
         self._device = device or ("cuda" if torch.cuda.is_available() else "cpu")
+
+        if config.deterministic:
+            import os
+            os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")
+            torch.use_deterministic_algorithms(True, warn_only=True)
+            if torch.cuda.is_available():
+                torch.backends.cudnn.deterministic = True
+                torch.backends.cudnn.benchmark = False
+            logger.info("Deterministic mode enabled (CUBLAS_WORKSPACE_CONFIG, cudnn.deterministic=True)")
 
         dtype_map = {
             "bfloat16": torch.bfloat16,

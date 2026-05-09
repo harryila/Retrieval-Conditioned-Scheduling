@@ -17,6 +17,17 @@ from .uniform_eval import run_uniform_eval
 logger = logging.getLogger(__name__)
 
 
+def _eval_to_dict(r):
+    return {
+        "step": r.step,
+        "correct_count": r.correct_count,
+        "total": r.total,
+        "accuracy": r.accuracy,
+        "mean_loss": r.mean_loss,
+        "per_item": r.per_item,
+    }
+
+
 def _metrics_to_dict(metrics):
     return {
         "forgetting_snapshots": [s.__dict__ for s in metrics.forgetting_snapshots],
@@ -27,17 +38,11 @@ def _metrics_to_dict(metrics):
         "remastery_events": metrics.remastery_events,
         "total_remastery_events": metrics.total_remastery_events,
         "stopped_early_budget": metrics.stopped_early_budget,
-        "uniform_eval_results": [
-            {
-                "step": r.step,
-                "correct_count": r.correct_count,
-                "total": r.total,
-                "accuracy": r.accuracy,
-                "mean_loss": r.mean_loss,
-                "per_item": r.per_item,
-            }
-            for r in metrics.uniform_eval_results
-        ],
+        "uniform_eval_results": [_eval_to_dict(r) for r in metrics.uniform_eval_results],
+        "held_out_eval_results": {
+            tag: [_eval_to_dict(r) for r in results]
+            for tag, results in metrics.held_out_eval_results.items()
+        },
     }
 
 
@@ -97,13 +102,27 @@ def run(args: argparse.Namespace) -> dict:
     else:
         items = build_sample_dataset(args.sample_size)
 
-    held_out_items = None
+    held_out_sets: list[tuple[str, list]] = []
     if getattr(args, "held_out_dataset_path", None):
-        held_out_items = load_closed_book_jsonl(args.held_out_dataset_path)
+        items_h = load_closed_book_jsonl(args.held_out_dataset_path)
+        held_out_sets.append(("held_out", items_h))
         logger.info(
             "Loaded held-out dataset: %d items from %s",
-            len(held_out_items), args.held_out_dataset_path,
+            len(items_h), args.held_out_dataset_path,
         )
+    if getattr(args, "held_out_dataset_paths", None):
+        for entry in args.held_out_dataset_paths.split(","):
+            entry = entry.strip()
+            if not entry:
+                continue
+            if ":" in entry:
+                tag, path = entry.split(":", 1)
+            else:
+                tag = "held_out_" + Path(entry).stem
+                path = entry
+            items_h = load_closed_book_jsonl(path)
+            held_out_sets.append((tag, items_h))
+            logger.info("Loaded held-out set [%s]: %d items from %s", tag, len(items_h), path)
 
     real_model = None
     if args.real:
@@ -119,6 +138,7 @@ def run(args: argparse.Namespace) -> dict:
             grad_accum_steps=args.grad_accum_steps,
             dtype=args.dtype,
             hf_token=args.hf_token,
+            deterministic=getattr(args, "deterministic", False),
         )
         real_model = RealModelAdapter(rcfg)
         items = _with_real_model_difficulty(items, real_model)
@@ -133,6 +153,18 @@ def run(args: argparse.Namespace) -> dict:
             items_seed = _with_mock_difficulty(items, seed=seed, noise_std=args.mock_noise_std)
         else:
             items_seed = items
+
+        periodic_tag_set = set()
+        if getattr(args, "held_out_periodic_tags", None):
+            periodic_tag_set = {t.strip() for t in args.held_out_periodic_tags.split(",") if t.strip()}
+        periodic_held_out_sets = [
+            (tag, items_h) for tag, items_h in held_out_sets if tag in periodic_tag_set
+        ]
+        if periodic_held_out_sets:
+            logger.info(
+                "Periodic held-out enabled for: %s",
+                [tag for tag, _ in periodic_held_out_sets],
+            )
 
         for method in args.methods:
             logger.info("=== seed=%d  method=%s ===", seed, method)
@@ -162,6 +194,7 @@ def run(args: argparse.Namespace) -> dict:
                     max_training_tokens=args.max_training_tokens,
                     loss_threshold=loss_threshold,
                     uniform_eval_items=items_seed,
+                    periodic_held_out_sets=periodic_held_out_sets or None,
                 )
                 if args.scheduler == "leitner":
                     scheduler = LeitnerScheduler()
@@ -187,6 +220,7 @@ def run(args: argparse.Namespace) -> dict:
                     eval_every_steps=args.eval_every,
                     max_training_tokens=args.max_training_tokens,
                     uniform_eval_items=items_seed,
+                    periodic_held_out_sets=periodic_held_out_sets or None,
                 )
                 trainer = BaselineTrainer(items=items_seed, model=model, cfg=bcfg, policy=method, seed=seed)
                 metrics = trainer.train()
@@ -199,25 +233,45 @@ def run(args: argparse.Namespace) -> dict:
                 eval_result.accuracy * 100, eval_result.mean_loss,
             )
 
-            metrics_dict = _metrics_to_dict(metrics)
-
-            if held_out_items is not None:
+            for tag, items_h in held_out_sets:
                 held_out_result = run_uniform_eval(
-                    model, held_out_items, step=-1, include_per_item=True
+                    model, items_h, step=-1, include_per_item=True
                 )
                 logger.info(
-                    "  held-out eval: %d / %d correct (%.1f%%), mean_loss=%.4f",
-                    held_out_result.correct_count, held_out_result.total,
+                    "  held-out [%s] eval: %d / %d correct (%.1f%%), mean_loss=%.4f",
+                    tag, held_out_result.correct_count, held_out_result.total,
                     held_out_result.accuracy * 100, held_out_result.mean_loss,
                 )
-                metrics_dict["held_out_eval_result"] = {
-                    "step": held_out_result.step,
-                    "correct_count": held_out_result.correct_count,
-                    "total": held_out_result.total,
-                    "accuracy": held_out_result.accuracy,
-                    "mean_loss": held_out_result.mean_loss,
-                    "per_item": held_out_result.per_item,
+                metrics.held_out_eval_results.setdefault(tag, []).append(held_out_result)
+
+            metrics_dict = _metrics_to_dict(metrics)
+
+            for tag, _ in held_out_sets:
+                end_result = metrics.held_out_eval_results[tag][-1]
+                legacy_key = "held_out_eval_result" if tag == "held_out" else f"held_out_eval_result__{tag}"
+                metrics_dict[legacy_key] = _eval_to_dict(end_result)
+
+            if args.real and getattr(args, "save_final_lora", False):
+                import torch as _torch
+                lora_path = Path(args.output).with_suffix(".lora.pt")
+                lora_state = {
+                    k: v.detach().cpu().clone()
+                    for k, v in model.model.state_dict().items()
+                    if "lora_" in k
                 }
+                _torch.save(
+                    {
+                        "lora_state_dict": lora_state,
+                        "model_name": args.model_name,
+                        "lora_r": args.lora_r,
+                        "lora_alpha": args.lora_alpha,
+                        "seed": seed,
+                        "method": method,
+                        "steps": args.steps,
+                    },
+                    lora_path,
+                )
+                logger.info("Saved LoRA weights to %s (%d tensors)", lora_path, len(lora_state))
 
             out[seed_key][method] = metrics_dict
 
@@ -239,6 +293,23 @@ def parse_args() -> argparse.Namespace:
         default=None,
         help="Optional JSONL of held-out items. After training, runs uniform eval on these and stores under held_out_eval_result.",
     )
+    p.add_argument(
+        "--held-out-dataset-paths",
+        type=str,
+        default=None,
+        help="Comma-separated list of additional held-out JSONLs. Format: 'tag1:path1,tag2:path2' or just 'path1,path2' (tag inferred from filename). Each set produces a 'held_out_eval_result__<tag>' field in the output JSON.",
+    )
+    p.add_argument(
+        "--held-out-periodic-tags",
+        type=str,
+        default=None,
+        help="Comma-separated list of held-out tags (from --held-out-dataset-paths) that should ALSO be evaluated at every uniform-eval checkpoint. Default: end-of-training only.",
+    )
+    p.add_argument(
+        "--save-final-lora",
+        action="store_true",
+        help="After training, pickle the final LoRA weights to <output>.lora.pt. Enables offline mech-interp / weight analysis. Real-mode only.",
+    )
     p.add_argument("--sample-size", type=int, default=200)
 
     # Experiment matrix
@@ -251,6 +322,11 @@ def parse_args() -> argparse.Namespace:
         type=int,
         default=0,
         help="Starting seed value (default 0). Combined with --seeds, runs seeds [start, start+seeds).",
+    )
+    p.add_argument(
+        "--deterministic",
+        action="store_true",
+        help="Enable CUDA deterministic algorithms (cudnn.deterministic + cublas workspace). Slower but reproducible across reruns at the same seed.",
     )
     p.add_argument("--scheduler", choices=["leitner", "fsrs", "random_matched", "random_wide"], default="leitner")
     p.add_argument("--max-training-tokens", type=int, default=None)

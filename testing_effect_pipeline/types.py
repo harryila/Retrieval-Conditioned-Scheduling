@@ -82,3 +82,4 @@ class TrainingMetrics:
     total_remastery_events: int = 0
     stopped_early_budget: bool = False
     uniform_eval_results: list[UniformEvalResult] = field(default_factory=list)
+    held_out_eval_results: dict[str, list[UniformEvalResult]] = field(default_factory=dict)

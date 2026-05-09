@@ -28,6 +28,7 @@ class TrainConfig:
     max_training_tokens: int | None = None
     loss_threshold: float | None = None
     uniform_eval_items: list[QAItem] | None = None
+    periodic_held_out_sets: list[tuple[str, list[QAItem]]] | None = None
 
 
 class TestingEffectTrainer:
@@ -310,6 +311,12 @@ class TestingEffectTrainer:
                     ue = run_uniform_eval(self.model, cfg.uniform_eval_items, step=step, include_per_item=False)
                     self.metrics.uniform_eval_results.append(ue)
                     logger.info("  periodic uniform eval: %d/%d (%.1f%%)", ue.correct_count, ue.total, ue.accuracy * 100)
+                if cfg.periodic_held_out_sets:
+                    for tag, items_h in cfg.periodic_held_out_sets:
+                        he = run_uniform_eval(self.model, items_h, step=step, include_per_item=False)
+                        self.metrics.held_out_eval_results.setdefault(tag, []).append(he)
+                        logger.info("  periodic held-out [%s]: %d/%d (%.1f%%)",
+                                    tag, he.correct_count, he.total, he.accuracy * 100)
 
             if self.budget.over_budget():
                 self.metrics.stopped_early_budget = True
