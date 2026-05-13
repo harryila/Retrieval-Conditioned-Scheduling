@@ -1,0 +1,11 @@
+{
+  "model_name": "Qwen/Qwen2.5-0.5B-Instruct",
+  "seed": 42,
+  "split": "validation",
+  "last_processed_index": 3609,
+  "total_evaluated": 3610,
+  "total_known": 78,
+  "total_unknown": 3532,
+  "target_unknown": 100000,
+  "complete": true
+}
