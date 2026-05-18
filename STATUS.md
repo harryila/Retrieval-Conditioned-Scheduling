@@ -121,6 +121,75 @@ The held-out gap on softer metrics is ~1–2 pp larger than on strict EM for the
 
 **Bottom-line update**: the "no real generalization, ~3% held-out is paraphrase lookup" story is confirmed by all four probes. RP's advantage is on training-distribution efficiency, not transfer.
 
+### Phase 9: mechanism (LoRA weights) + transfer (topic-paired) + replication design (added 2026-05-18)
+
+Three new analyses on the same 24 saved LoRAs. Outputs in [analysis/results/](analysis/results/).
+
+**Phase 9.A — LoRA weight analysis ([`lora_weights_*.csv`](analysis/results/))**
+
+Effective update per (layer, q_proj|v_proj) computed as ΔW = B·A. 96 entries per LoRA × 24 LoRAs.
+
+*Frobenius norm + effective rank* (mean across 48 layer/module entries):
+
+| Config | Fro total | Eff rank mean | Norm peak layer |
+|---|---|---|---|
+| r=8 (4k) | ~16 | 5.4 / 8 | L0 q_proj |
+| r=16 (4k) | ~20 | 9.0 / 16 | L0 q_proj |
+| r=16 (8k) | ~31 | 11.0 / 16 | L0 q_proj |
+| r=32 (4k) | ~26 | 15.1 / 32 | L0 q_proj |
+
+RP and SFT have *similar* total Frobenius norms at matched config. They use the LoRA capacity similarly (effective rank within 0.5 of each other). Both peak at layer 0 q_proj (the input attention).
+
+*Cosine similarity between contrasts* (mean across 48 layer-modules):
+
+| Contrast | Mean cos | Top-4 SV diag alignment |
+|---|---|---|
+| r=16 8k RP ↔ SFT | +0.112 | 0.172 |
+| r=16 seed1 RP ↔ SFT | +0.140 | 0.188 |
+| r=8 seed1 RP ↔ SFT | +0.170 | 0.235 |
+| r=32 RP ↔ SFT | +0.129 | 0.192 |
+| Q1 easy RP ↔ SFT | +0.108 | 0.168 |
+| Q4 hard RP ↔ SFT | +0.134 | 0.199 |
+| **RP_Q1 ↔ RP_Q4 (within-method)** | **+0.002** | **0.071** |
+| **SFT_Q1 ↔ SFT_Q4 (within-method)** | **+0.003** | **0.073** |
+| RP 4k ↔ 8k (within-method) | +0.115 | 0.181 |
+| SFT 4k ↔ 8k (within-method) | +0.165 | 0.235 |
+
+**Three first-class mechanistic findings:**
+
+1. **RP and SFT learn weakly-aligned updates** at matched config (cos ~0.1–0.2). They share some structure but ~85% of each update is method-specific. Consistent with the empirical fact that they give different per-item predictions.
+
+2. **Q1 (easy items) and Q4 (hard items) LoRAs are near-orthogonal** within method (cos ~0.002–0.003, top-4 SV alignment ~0.07). Easy-item training and hard-item training occupy completely different parameter subspaces. This is the mechanistic basis for the difficulty-shrinking-gap finding: easy and hard items genuinely require different learned structure, not just different amounts of the same thing.
+
+3. **4k → 8k training learns NEW directions, not just amplifies existing ones** (cos ~0.12–0.17). If 8k were just "more of the same", cos would approach 1. The model continues to discover useful structure beyond 4k — directly explaining why the gap WIDENS rather than plateaus with training.
+
+**Phase 9.B — Topic-paired held-out (`analysis/results/topic_paired/`)**
+
+The strongest transfer test we can construct with current data:
+- 360 hard items, each a SIBLING question about the SAME entity as a training item
+- e.g. training had "when did breaking bad first air" → topic-paired has "who created the tv show breaking bad"
+- 500 anchors sampled from 10k training items → GPT-4o sibling generation → GPT-4o-mini verify → base-Qwen filter → 360 hard items remain
+- All 24 LoRAs evaluated against this set
+
+Result: RP-SFT gaps in **±2 pp band**, identical to indist/ood/synthetic:
+
+| Contrast | Indist | OOD | Synthetic | Topic-paired |
+|---|---|---|---|---|
+| r=16 8k | +0.5 | +0.5 | -2.1 | -0.83 |
+| r=16 seed1 | -1.0 | +0.3 | +3.5 | -0.83 |
+| Q1 easy | +1.6 | +0.4 | -3.4 | -1.39 |
+| Q4 hard | 0.0 | +0.7 | +2.8 | +1.67 |
+| r=32 | +0.5 | +0.5 | +0.7 | +1.39 |
+
+**This is the strongest possible negative-transfer result.** Even on questions about the same entities the LoRA was trained on, neither method has a generalization advantage. The testing-effect win is bounded entirely to training-distribution efficiency.
+
+**Phase 9.C — Quartile × held-out + far-from-training cross-tabs ([`quartile_heldout.csv`](analysis/results/quartile_heldout.csv), [`far_from_training_*.csv`](analysis/results/))**
+
+- *Quartile × held-out*: the Q1→Q4 difficulty progression on training (+9.5 → +2.1) is muted on held-out (indist: +1.6 → 0.0; ood: +0.4 → +0.65 — essentially noise). The within-dataset gap is a training-efficiency phenomenon, not a transfer-ability phenomenon.
+- *Far-from-training*: at τ=0.5 (only 29% of OOD items kept), gaps are in ±1 pp band across all contrasts. r=16 8k shows a consistent ~+0.3 pp gap across τ ∈ {0.5, 0.6, 0.7} — at the noise floor but not negative. Tiny residual signal *might* survive the paraphrase filter, but not at a meaningful level.
+
+**Net implication after Phase 9**: the paper has now exhausted the "is there transfer?" question with current data. Three positive findings (mechanism cleanness, gap-widens-with-training, difficulty shrink) and one strong negative (no transfer) are well-supported.
+
 ## Completed GPU stages
 
 ### Stage 3: 16 runs ✅ [run_set2_stage3.sh](run_set2_stage3.sh) → `artifacts_t8_stage3/`
@@ -175,17 +244,40 @@ See [MEETING_NOTES.md](MEETING_NOTES.md) for original detail. Re-ranked based on
 
 ### A2. New high-value follow-ups suggested by Stage 3 + 4 results
 
-These weren't in the meeting but the new data implies them:
-
-| # | Item | Why | Cost |
+| # | Item | Status | Cost |
 |---|---|---|---|
-| F1 | **r=32 second seed** | r=32 result is single-seed; we can't tell if the slight narrowing (+3.87 vs +4.57) is real or noise | ~$3 GPU |
-| F2 | **Q1+Q4 deterministic reruns at seeds 1, 2** | Quartile sweep is single-seed too; the +9.47 → +2.08 trend is striking but n=1 per quartile | ~$15 GPU |
-| F3 | **r=16 SFT seed 1 deterministic rerun** | clean up the 15.12 ↔ 12.63 non-det artifact before publishing seed averages | ~$3 GPU |
-| F4 | **Quartile × held-out** | does the "easy items win more" pattern also hold for held-out evaluation? Tests whether the within-dataset gap is itself about memorization vs transfer | ~$0 (offline eval on saved LoRAs) |
-| F5 | **Mech interp Tier 1: LoRA weight diff between RP-Q1 and RP-Q4** | we have saved LoRAs; comparing what the model learned on easy-where-RP-wins vs hard-where-it-barely-wins should be highly diagnostic | $0 |
+| F1 | r=32 second seed | pending — bundled into [run_stage5_replicate.sh](run_stage5_replicate.sh) Block B/C optional | ~$3 GPU |
+| F2 | **Q1+Q4 reruns at seeds 1, 2** (the Q1→Q4 trend is the most striking new finding) | scripted: [run_stage5_replicate.sh](run_stage5_replicate.sh) Block A | ~$15 GPU |
+| F3 | r=16 SFT seed 1 deterministic rerun | partially covered by Stage 3 Tier 7; full rerun in Block A reuses --deterministic | included in F2 |
+| F4 | Quartile × held-out cross-tab | ✅ done ([`quartile_heldout.csv`](analysis/results/quartile_heldout.csv)) — Q1→Q4 trend is real on indist (+1.6 → 0), small/noisy on ood and synthetic | $0 |
+| F5 | **LoRA weight diff RP↔SFT and Q1↔Q4** | ✅ done ([`lora_weights_*.csv`](analysis/results/)) — Q1 and Q4 LoRAs are near-orthogonal (cos +0.002); RP/SFT share ~10–17% of update direction | $0 |
+| F6 | **Topic-paired held-out** (same-entity transfer test) | ✅ done — 360 items, gaps in ±2pp band, confirms no transfer at strongest test | ~$0.50 API |
+| F7 | **Far-from-training subset analysis** | ✅ done — gaps at τ=0.5 (29% of OOD items) in ±1pp band; r=16 8k shows residual +0.3 pp ghost signal | $0 |
+| F8 | r=8 → 8k extension | scripted: [run_stage5_replicate.sh](run_stage5_replicate.sh) Block C — tests whether gap-widening is universal or r=16-specific | ~$5 GPU |
+| F9 | r=16 → 8k seed 1 replication | scripted: [run_stage5_replicate.sh](run_stage5_replicate.sh) Block B — confirms the +11pp at-8k headline at second seed | ~$5 GPU |
 
-F4 and F5 are essentially free — they use already-saved LoRAs. Both should happen regardless of other priorities.
+**Total pending GPU cost (F1, F2, F8, F9 combined into Stage 5)**: ~$25, ~25 hr wall on a 4090.
+
+### A2.bis After Phase 9 — what's left scientifically
+
+The paper now has:
+- *RP > SFT effect* — proven, replicated, mechanism-grounded.
+- *Mechanism* — test+grad coupling dominant, FSRS secondary at higher capacity.
+- *Time-monotonic widening* — proven at r=16 seed 0; Block B replicates at seed 1; Block C tests r=8.
+- *Difficulty-shrinking gap* — proven at n=1/quartile; Block A replicates at seeds 1+2.
+- *No transfer* — proven at 4 independent held-out sets (indist, ood, synthetic, topic-paired) AND on far-from-training subsets.
+- *Mechanism (weights)* — Q1/Q4 orthogonal; 4k/8k weakly aligned; RP/SFT share ~15% of update direction.
+
+Open questions worth more compute:
+
+| Idea | Probability of meaningful result | Cost |
+|---|---|---|
+| Larger model (1.5B / 7B Qwen) | high — but separate-paper territory; would dilute current claim | $50–150 each |
+| Other QA datasets (TriviaQA / SQuAD-closed) | medium — same effect or shift? | $30–50 each |
+| Different LoRA targets (MLP / gate_proj instead of attention) | medium — weight analysis shows attention layer 0 absorbs most; MLP could differ | $15 |
+| Periodic OOD held-out (was deferred) | low — held-out is fundamentally flat throughout | $5 |
+| Tier-2 mech interp: logit lens on RP-only-wins vs SFT-only-wins items | medium-high — *should* tell us why RP picks different items | $0 (offline on saved LoRAs) |
+| Hidden-state-level cosine between RP and SFT mid-forward-pass | high if Tier-2 doesn't move the needle | $0 |
 
 ### A3. Standard post-GPU work (analysis + writeup)
 

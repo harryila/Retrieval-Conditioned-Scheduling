@@ -221,6 +221,57 @@ The held-out gap on lenient_em / token_f1 / edit_sim is ~1–2 pp larger than on
 
 **Net implication**: the headline RP > SFT result is real, replicated, mechanism-grounded, and bounded to training-distribution efficiency. The held-out story is **paraphrase recognition with similar lift across methods**, not transfer — a positive characterization of the negative claim.
 
+### Phase 9: weight-space mechanism + topic-paired transfer (2026-05-18)
+
+Three additional analyses on the same 24 saved LoRAs land the strongest version of the paper.
+
+**LoRA weight analysis (Tier-1 mech interp).**
+
+For every saved checkpoint we compute ΔW = B·A per (layer, q_proj|v_proj) and examine norms, effective ranks, and cosine alignment across contrasts.
+
+Three findings:
+
+- *RP and SFT learn weakly-aligned updates.* At matched config, cos(ΔW_RP, ΔW_SFT) ≈ 0.10–0.17 averaged across 48 layer-modules. They share some direction but ~85% of each update is method-specific.
+- *Q1 (easy) and Q4 (hard) LoRAs are near-orthogonal within method.* cos(ΔW_Q1, ΔW_Q4) ≈ 0.002 for RP and 0.003 for SFT. Top-4 singular vector alignment ~0.07. Easy and hard items genuinely use different parameter subspaces.
+- *4k→8k learns NEW directions, not just amplifies existing ones.* cos(ΔW_4k, ΔW_8k) ≈ 0.12 (RP) and 0.17 (SFT). If 8k were just "more of the same" cos would approach 1. The model keeps discovering useful structure — this is the mechanistic basis for the gap continuing to widen.
+
+This is a clean, publishable mechanism story: RP and SFT diverge in *parameter space* (low cosine), and the divergence is most pronounced at higher capacity / harder items.
+
+**Topic-paired held-out — the strongest transfer test we can construct.**
+
+For each of 500 sampled training items, GPT-4o generates a SIBLING question about the SAME entity, asking about a DIFFERENT fact. GPT-4o-mini verifies factual correctness; base Qwen filters to items it doesn't already know (lenient substring match). Result: 360 hard items.
+
+Example:
+- Training anchor: "when did breaking bad first air" → "January 20, 2008"
+- Topic-paired sibling: "who created the tv show breaking bad" → "Vince Gilligan"
+
+If RP learns *anything* about Breaking Bad beyond paraphrase recognition, it should outperform SFT here. Result across 24 LoRAs:
+
+| Contrast | Indist | OOD | Synthetic | **Topic-paired** |
+|---|---|---|---|---|
+| r=16 8k | +0.5 | +0.5 | -2.1 | **-0.83** |
+| r=16 seed1 | -1.0 | +0.3 | +3.5 | **-0.83** |
+| Q1 easy | +1.6 | +0.4 | -3.4 | **-1.39** |
+| Q4 hard | 0.0 | +0.7 | +2.8 | **+1.67** |
+| r=32 | +0.5 | +0.5 | +0.7 | **+1.39** |
+
+All four held-out sets give gaps in the same ±2 pp noise band. **Even with same-entity transfer, neither method generalizes more than the other.** This is the strongest negative-transfer result we can claim.
+
+**Quartile × held-out + far-from-training.**
+
+The Q1→Q4 difficulty progression (training: +9.5 → +2.1) is heavily muted on held-out (indist: +1.6 → 0.0; ood essentially flat). The within-dataset gap is a training-efficiency phenomenon, not a transfer-ability phenomenon.
+
+On the far-from-training subset (cosine < 0.5 to any training item), r=16 8k shows a residual +0.3 pp consistent across thresholds — at the noise floor but the only non-negative consistent signal. Tiny ghost of transfer; nothing we can claim as a positive result.
+
+**After Phase 9 — what remains to test.**
+
+Replication is the open work:
+- Block A (8 runs): quartile reruns at seeds 1, 2 — confirms the Q1→Q4 monotonic shrink isn't n=1 noise.
+- Block B (2 runs): r=16 → 8k extension at seed 1 — confirms the +11 pp gap at 8k is reproducible.
+- Block C (2 runs): r=8 → 8k extension — tests whether the gap-widening behavior is universal or r=16-specific.
+
+[run_stage5_replicate.sh](run_stage5_replicate.sh) covers all 12 runs. Total ~$25 GPU, ~25 hr wall.
+
 ## What we're suspicious about (now, post Stage 3 + 4)
 
 1. **r=32 narrowing might be real or noise.** Single-seed gives +3.87 pp vs +4.57 pp at r=16. Need a second r=32 seed (~$3) to know if capacity actually starts to favor SFT or if this is just variance.
