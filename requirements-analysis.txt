@@ -1,0 +1,22 @@
+# Analysis-only deps (N3 synthetic data, N4 taxonomy, N5 nearest-neighbor, offline LoRA eval for N2).
+# Install into .venv_analysis (separate from training env) with:
+#   uv pip install -p .venv_analysis/bin/python -r requirements-analysis.txt
+
+# Inference / LoRA loading
+torch>=2.1.0
+transformers>=4.40.0
+peft>=0.10.0
+accelerate>=0.28.0
+
+# Embeddings + similarity
+sentence-transformers>=2.7.0
+scikit-learn>=1.3.0
+numpy>=1.24.0
+
+# LLM API clients (N3, N4)
+openai>=1.40.0
+anthropic>=0.34.0
+tiktoken>=0.7.0
+
+# Convenience
+tqdm>=4.65.0
