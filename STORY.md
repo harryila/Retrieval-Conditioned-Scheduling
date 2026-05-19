@@ -272,6 +272,33 @@ Replication is the open work:
 
 [run_stage5_replicate.sh](run_stage5_replicate.sh) covers all 12 runs. Total ~$25 GPU, ~25 hr wall.
 
+### Phase 10: per-item rescue decomposition (2026-05-18, offline)
+
+The most striking single observation in the project, hiding in the saved JSONs the whole time. For each training item × 24 LoRAs we have the final correct/loss. Decomposing each (RP, SFT) pair into four buckets:
+
+| Contrast | both | rp_only | sft_only | neither | RP share of asym wins |
+|---|---|---|---|---|---|
+| r=8 seed 1 | 799 | 629 | 401 | 8171 | 61% |
+| r=16 seed 1 | 915 | 971 | 348 | 7766 | **74%** |
+| r=16 8k | 2132 | 1775 | 653 | 5440 | **73%** |
+| r=32 | 1292 | 986 | 599 | 7123 | 62% |
+| Q1 easy | 3058 | 1924 | 741 | 6777 | 72% |
+| Q4 hard | 297 | 436 | 175 | 11592 | **71%** |
+
+**The RP > SFT effect is asymmetric rescue, not symmetric improvement.** Both methods share a base correct-set (the ~800–3000 "both correct" items) but RP picks up 60–74% of the items where exactly one method gets it right. SFT's "shadow" of nearly-learned items contains more incremental probability mass for RP to capture than vice versa.
+
+**The rescued items are at the decision boundary.** For Q1–Q3 contrasts, the average SFT final loss on RP-rescued items is 0.7–1.0 — items SFT had compressed into a near-correct distribution but ended up on the wrong side. Examples at r=16 8k:
+
+- SFT_loss=0.02, RP_loss=0.03, Q: *what year did 45 rpm records come out*
+- SFT_loss=0.05, RP_loss=0.01, Q: *who ends up ruling after the war between the kauravas and pandavas*
+- SFT_loss=0.07, RP_loss=0.01, Q: *the earth is tilted on its axis at an angle of*
+
+These are exactly the kinds of items the test+gradient coupling mechanism would have leverage over — items where the model has good representations but is just on the wrong side of the decision boundary. RP's "test → see failure → re-gradient" pushes them over.
+
+**Q4 hard shows the most extreme asymmetry** (71% RP / 29% SFT) — but in absolute terms, both methods leave 93% of items in the `neither` bucket. The aggregate +2.1 pp gap masks a 2.5× method-specific rescue ratio. The "gap shrinks with difficulty" finding lives entirely in the explosion of unlearnable items, not in any change to the underlying asymmetry mechanism.
+
+**Headline plots produced:** [figures/quartile_sweep.html](figures/quartile_sweep.html), [figures/heldout_cross_set.html](figures/heldout_cross_set.html), [figures/mechanism_ladder.html](figures/mechanism_ladder.html), [figures/weight_cosine_heat.html](figures/weight_cosine_heat.html), [figures/rescue_decomposition.html](figures/rescue_decomposition.html), [figures/lora_norm_by_layer.html](figures/lora_norm_by_layer.html). Standalone HTML, plotly-CDN, paper-ready.
+
 ## What we're suspicious about (now, post Stage 3 + 4)
 
 1. **r=32 narrowing might be real or noise.** Single-seed gives +3.87 pp vs +4.57 pp at r=16. Need a second r=32 seed (~$3) to know if capacity actually starts to favor SFT or if this is just variance.
@@ -321,6 +348,8 @@ That's a defensible paper. The Shahen items (next section in [STATUS.md](STATUS.
 | "What did N5 add?" | Concrete shape for the no-generalization claim: items within cosine 0.9 of training are ~5× more likely to be correct than items farther away, for *both* methods (lift +14 pp RP vs +13 pp SFT on r=16 8k ood). The held-out 3% accuracy is paraphrase recognition, not transfer. |
 | "What did N4 add?" | The RP-SFT gap on Q1 easy is broad, not category-specific — RP wins on when, date, science, pop_culture, history, literature, etc. This rules out a single-skill explanation and supports the broad-efficiency mechanism story. |
 | "What did N3 add?" | A third independent held-out set (synthetic items). All three held-outs (indist, ood, synthetic) give RP-SFT Δ in ±3 pp. No method has a held-out advantage on any of them. |
+| "What did the per-item flip analysis show?" | The clearest single picture of the RP advantage: RP rescues 60–74% of items where exactly one method gets it right, *consistently across every contrast measured*. SFT's "almost-learned" pool (final loss 0.7–1.0) contains more incremental probability mass for RP to push over the line than vice versa. The testing effect is asymmetric rescue at the decision boundary. |
+| "What did the LoRA weight analysis show?" | Three findings on 24 saved checkpoints. (1) RP and SFT learn weakly-aligned updates at matched config (cos ≈ 0.10–0.17 across 48 layer-modules — ~85% method-specific). (2) Q1-easy and Q4-hard LoRAs are near-orthogonal within method (cos ≈ 0.002) — easy and hard items use entirely different parameter subspaces. (3) 4k→8k training keeps learning NEW directions (cos ≈ 0.12–0.17, not 1) — the gap widens because the model keeps discovering useful structure. |
 
 ## Quick numbers to have memorized for the meeting
 

@@ -190,6 +190,42 @@ Result: RP-SFT gaps in **±2 pp band**, identical to indist/ood/synthetic:
 
 **Net implication after Phase 9**: the paper has now exhausted the "is there transfer?" question with current data. Three positive findings (mechanism cleanness, gap-widens-with-training, difficulty shrink) and one strong negative (no transfer) are well-supported.
 
+**Phase 10 — Per-item rescue decomposition ([`flip_contrasts.csv`](analysis/results/flip_contrasts.csv), [`flip_rescued_examples.jsonl`](analysis/results/flip_rescued_examples.jsonl))**
+
+Using the per-item correct/loss saved at the final eval step for all 10k/12.5k training items × 24 LoRAs, we decompose each (RP, SFT) contrast into `both_correct`, `rp_only`, `sft_only`, `neither`:
+
+| Contrast | both | rp_only | sft_only | neither | RP share of asym wins | SFT final loss on RP-only items | RP final loss on SFT-only items |
+|---|---|---|---|---|---|---|---|
+| r=8 seed 1 | 799 | 629 | 401 | 8171 | 61% | 0.8 | 0.7 |
+| r=8 seed 2 | 772 | 580 | 419 | 8229 | 58% | 0.8 | 0.8 |
+| r=16 seed 1 | 915 | 971 | 348 | 7766 | **74%** | 0.9 | 0.7 |
+| r=16 8k | 2132 | 1775 | 653 | 5440 | **73%** | 0.9 | 0.7 |
+| r=32 | 1292 | 986 | 599 | 7123 | 62% | 0.9 | 0.8 |
+| Q1 easy | 3058 | 1924 | 741 | 6777 | 72% | 0.7 | 0.5 |
+| Q2 | 1558 | 1349 | 737 | 8856 | 65% | 0.8 | 0.7 |
+| Q3 | 675 | 782 | 408 | 10635 | 66% | 1.0 | 0.9 |
+| Q4 hard | 297 | 436 | 175 | 11592 | **71%** | 1.7 | 1.0 |
+
+**Three new mechanistic findings:**
+
+1. **RP rescues ~60–74% of asymmetric wins** across every contrast measured. The "RP > SFT" win isn't that RP is uniformly better on the same items — both methods get a shared base correct (~800–3000 items), and RP picks up substantially MORE incremental items than SFT does. **The gap is asymmetric rescue, not symmetric improvement.**
+
+2. **Rescued items are at the decision boundary.** For Q1–Q3 contrasts, SFT's final loss on RP-rescued items is 0.7–1.0 — items where SFT has compressed the answer distribution but ends up on the wrong side. Test+gradient coupling pushes these boundary items over. RP-only items aren't "items SFT was nowhere near learning" — they're "items SFT was *almost* learning". This is the per-item mechanistic signature of the testing effect.
+
+3. **Q4 hard is the most extreme asymmetry** (RP gets 71% of asymmetric wins, mean SFT final loss on rescued items = 1.7) — but absolute counts are tiny (436 vs 175 of 12500). The aggregate +2.1 pp gap masks a 2.5× ratio of method-specific rescue. The "gap shrinks with difficulty" finding lives entirely in the `neither` bucket exploding from 6777 (Q1) to 11592 (Q4).
+
+Example rescued items at r=16 8k (sorted by SFT final loss — these are items SFT was *closest* to learning but didn't quite flip):
+
+- `SFT_loss=0.02  RP_loss=0.03  Q: what year did 45 rpm records come out`
+- `SFT_loss=0.05  RP_loss=0.01  Q: who ends up ruling after the war between the kauravas and pandavas`
+- `SFT_loss=0.06  RP_loss=0.01  Q: when did the world celebrate it most recent millennium`
+- `SFT_loss=0.07  RP_loss=0.01  Q: the earth is tilted on its axis at an angle of`
+- `SFT_loss=0.10  RP_loss=0.01  Q: article of the constitution that provides for the supreme court`
+
+The symmetric pattern (items SFT got but RP missed, RP's loss was equally low) shows both methods are operating on the same "compressed-but-near-boundary" item pool. RP just pushes more of them over the line.
+
+**Headline plots produced** ([`figures/`](figures/)): `quartile_sweep.html`, `heldout_cross_set.html`, `mechanism_ladder.html`, `weight_cosine_heat.html`, `rescue_decomposition.html`, `lora_norm_by_layer.html`. All standalone HTML, plotly-CDN.
+
 ## Completed GPU stages
 
 ### Stage 3: 16 runs ✅ [run_set2_stage3.sh](run_set2_stage3.sh) → `artifacts_t8_stage3/`

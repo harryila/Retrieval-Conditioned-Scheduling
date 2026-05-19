@@ -1,0 +1,10 @@
+contrast,rp_stem,sft_stem,n_common,both_correct,rp_only_correct,sft_only_correct,neither,frac_rp_only,frac_sft_only,mean_flip_step_rp_only,mean_flip_step_sft_only,mean_flip_step_both_via_rp,mean_flip_step_both_via_sft,mean_sft_final_loss_on_rp_only_items,mean_rp_final_loss_on_sft_only_items
+r8_seed1,set2_stage3_r8_retrieval_seed1_held,set2_stage3_r8_standard_seed1_held,10000,799,629,401,8171,0.0629,0.0401,-1.0,-1.0,-1.0,-1.0,0.8,0.7
+r8_seed2,set2_stage3_r8_retrieval_seed2,set2_stage3_r8_standard_seed2,10000,772,580,419,8229,0.058,0.0419,-1.0,-1.0,-1.0,-1.0,0.8,0.8
+r16_seed1,set2_stage3_r16_retrieval_seed1_held,set2_stage3_r16_standard_seed1_held,10000,915,971,348,7766,0.0971,0.0348,-1.0,-1.0,-1.0,-1.0,0.9,0.7
+r16_8k,set2_stage3_r16_retrieval_8k,set2_stage3_r16_standard_8k,10000,2132,1775,653,5440,0.1775,0.0653,-1.0,-1.0,-1.0,-1.0,0.9,0.7
+r32,set2_stage3_r32_retrieval,set2_stage3_r32_standard,10000,1292,986,599,7123,0.0986,0.0599,-1.0,-1.0,-1.0,-1.0,0.9,0.8
+Q1_easy,set1_quartile_1_easy_retrievalpractice,set1_quartile_1_easy_standardft,12500,3058,1924,741,6777,0.1539,0.0593,-1.0,-1.0,-1.0,-1.0,0.7,0.5
+Q2,set1_quartile_2_retrievalpractice,set1_quartile_2_standardft,12500,1558,1349,737,8856,0.1079,0.059,-1.0,-1.0,-1.0,-1.0,0.8,0.7
+Q3,set1_quartile_3_retrievalpractice,set1_quartile_3_standardft,12500,675,782,408,10635,0.0626,0.0326,-1.0,-1.0,-1.0,-1.0,1.0,0.9
+Q4_hard,set1_quartile_4_hard_retrievalpractice,set1_quartile_4_hard_standardft,12500,297,436,175,11592,0.0349,0.014,-1.0,-1.0,-1.0,-1.0,1.7,1.0

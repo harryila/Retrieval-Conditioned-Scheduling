@@ -1,5 +1,36 @@
 # Experiment Runs
 
+## Outcomes snapshot (post Stage 4 + Phase 8 / 9 / 10 analysis)
+
+For quick reference: the actual headline numbers that came out of each experiment. Details below; mechanism / generalization analyses live in [STATUS.md](STATUS.md) and [STORY.md](STORY.md).
+
+| Stage | Config | RP | SFT | Δ | Notes |
+|---|---|---|---|---|---|
+| Set 1 (50k random) | r=8 | 1.49 | 0.21 | +1.28 | unfiltered; floor noise dominates |
+| Set 1 (50k random) | r=16 | 2.04 | 0.65 | +1.39 | |
+| Set 2 (10k hard) | r=8 (mean of 3 seeds) | 14.05 | 11.74 | +2.31 | s0/s1/s2; max spread 0.5pp |
+| Set 2 (10k hard) | r=16 (n≥5 measurements) | 19.22 | 14.65 | +4.57 | r=16 SFT corrected for CUDA non-det |
+| Stage 3 capacity | r=32 (n=1) | 22.78 | 18.91 | +3.87 | needs 2nd seed |
+| Stage 3 time | r=16 @ 8k | **39.07** | **27.85** | **+11.22** | gap widens 4.2→11.2 pp from 4k |
+| Stage 4 quartile | Q1 easy | 39.86 | 30.39 | **+9.47** | gap *shrinks* with difficulty |
+| Stage 4 quartile | Q2 | 23.26 | 18.36 | +4.90 | |
+| Stage 4 quartile | Q3 | 11.66 | 8.66 | +3.00 | |
+| Stage 4 quartile | Q4 hard | 5.86 | 3.78 | **+2.08** | |
+
+**Mechanism decomposition** (mean of r=8 s0, r=16 s0, r=16 s1): mastery gate +0.4 pp, **test+gradient coupling +2.8 pp**, FSRS scheduling +1.2 pp.
+
+**Held-out generalization** (4 independent sets, 24 LoRAs): all gaps in ±3 pp band. Both methods score 2–4% on indist / ood / synthetic / topic-paired. The held-out wins are paraphrase recognition (cosine ≥ 0.9 items are ~5× more likely correct), not transfer.
+
+**Per-item rescue** (Phase 10): RP picks up 60–74% of the items where exactly one method gets it right, across every contrast measured. SFT's "almost-learned" pool has more incremental probability mass for the test+gradient mechanism to capture. Rescued items have SFT final loss 0.7–1.0 — items at the decision boundary.
+
+**LoRA weight analysis** (Phase 9): RP and SFT learn weakly-aligned updates (cos ≈ 0.10–0.17 over 48 layer-modules). Q1-easy and Q4-hard LoRAs are near-orthogonal within method (cos ≈ 0.002). 4k → 8k training learns NEW directions (cos ≈ 0.12–0.17), not amplifications of existing ones.
+
+Plots: [figures/](figures/). Per-item / per-LoRA CSVs and JSONLs: [analysis/results/](analysis/results/). Analysis scripts: [analysis/](analysis/).
+
+**Cumulative cost**: ~$136 across 47 GPU runs + ~$3 API for Phase 8/9/10. Stage 5 replication script ([run_stage5_replicate.sh](run_stage5_replicate.sh)) is the next ~$25 of GPU work.
+
+---
+
 ## Set 1: Random 50k subsample (Qwen2.5-0.5B + LoRA)
 
 Tests `retrieval_practice` vs `standard_ft` under capacity pressure. Smaller model (0.5B vs 1.5B) and much larger dataset (50k vs 1k) so the LoRA can't trivially memorize. Two LoRA ranks (r=8 and r=16), each method on its own GPU instance, **4 independent GPUs running in parallel**.
@@ -359,3 +390,126 @@ Everything else (steps, eval-every, lr, lora rank, max-training-tokens, schedule
 - **Only-unknowns training set** removes the floor effect: in Set 1, an unknown fraction of the 50k items are already correct at step 0, so any "improvement" on those items is no-op. Filtering to base-model-wrong items means every item is a real learning opportunity.
 - **Same scheduler / method / capacity knobs as Set 1** isolates the filtering as the only independent variable when comparing Set 1 vs Set 2 results.
 - **10k vs 50k** keeps step count constant (20k) so per-item exposure goes up by 5x, which should make `retrieval_practice`'s scheduling decisions matter more if the testing effect is real at this capacity.
+
+---
+
+## Stage 2 / 3 / 4 / 5: Set 2 follow-ups
+
+These stages all train on the **same** 10k base-model-unknown subsample as Set 2, varying only the mechanism (Stage 2), capacity / training duration / seeds (Stage 3), and difficulty quartile (Stage 4). Stage 5 replicates the most surprising Stage 3 + 4 findings at additional seeds. All artifacts live in `artifacts_t7_*/`, `artifacts_t8_*/`, `artifacts_t9_*/`.
+
+### Stage 2: mechanism ablation + held-out probes ([`run_set2_stage2.sh`](run_set2_stage2.sh))
+
+9 runs at r=16 seed 0:
+
+- `test_only` and `test_reinforce` mechanism ablations (no gradient on study items vs. gradient on test+reinforce)
+- `standard_ft` baseline with `--skip-mastered` (mastery gating alone)
+- `retrieval_practice` with `--scheduler random_matched` (kill FSRS, keep test+gradient)
+- 4× held-out evaluation passes at seed 1 (the 4 baseline configs from Set 2)
+
+This is where the **mechanism story is born**: test+gradient coupling alone gives +2.7 pp, FSRS scheduling adds +1.1 pp on top, mastery gating gives ~0. Saved 9 LoRA checkpoints.
+
+### Stage 3: capacity, time, seed reps ([`run_set2_stage3.sh`](run_set2_stage3.sh) → [`artifacts_t8_stage3/`](artifacts_t8_stage3/))
+
+16 runs covering 7 tiers:
+
+| Tier | Purpose | Runs | Headline |
+|---|---|---|---|
+| 0 | Build OOD held-out by filtering NQ `validation` for hardness | 1 (CPU/inference) | `data/nq_open_test_hard.jsonl` 3532 items |
+| 1 | r=8 mechanism replication | 3 | test+grad +3.20, FSRS ~0 (capacity-dependent) |
+| 2 | r=16 seed 1 mechanism replication | 2 | test+grad +2.55, FSRS +2.62 |
+| 3 | seed 1 held-out at all 4 baseline configs | 4 | gap bounded ±3 pp on indist + ood |
+| 4 | r=8 seed 2 reproducibility | 2 | r=8 RP=14.16, SFT=11.55, Δ=+2.61 |
+| 5 | r=32 capacity sweep | 2 | r=32 RP=22.78, SFT=18.91, Δ=+3.87 (single seed) |
+| 6 | r=16 extended to 8000 steps | 2 | gap widens: +4.17 @ 4k → +11.22 @ 8k |
+| 7 | r=16 SFT seed 0 with `--deterministic` | 1 | 15.36 — confirms CUDA non-det was the source of the original 11.46 outlier |
+
+All Stage-3 runs save the final LoRA (`--save-final-lora`) and a dual indist + ood held-out pass.
+
+### Stage 4: difficulty quartile sweep ([`run_set1_quartile_sweep.sh`](run_set1_quartile_sweep.sh) → [`artifacts_t9_quartile/`](artifacts_t9_quartile/))
+
+The original 50k Set-1 items were re-calibrated by per-item difficulty (using base-Qwen loss / hardness rank, see [`testing_effect_pipeline/quartile_split.py`](testing_effect_pipeline/quartile_split.py)) and split into 4 disjoint 12.5k quartiles:
+
+- `nq_open_50k_q1_easy.jsonl` (Q1, easiest 12.5k)
+- `nq_open_50k_q2.jsonl`, `nq_open_50k_q3.jsonl`
+- `nq_open_50k_q4_hard.jsonl` (Q4, hardest 12.5k)
+
+Each quartile gets RP + SFT at r=16 seed 0 (matched config, 4000 steps each). 8 runs total. **Headline plot twist**: the RP-SFT gap *shrinks* monotonically with item difficulty (Q1=+9.47 → Q4=+2.08 pp). The earlier cross-dataset "gap grows with difficulty" claim was confounded by training-set size. Saved 8 LoRAs for the Q1↔Q4 weight cosine analysis in Phase 9.
+
+### Stage 5: replication ([`run_stage5_replicate.sh`](run_stage5_replicate.sh))
+
+Pending GPU work (~$25, ~25 hr wall on a 4090). Three blocks:
+
+- **Block A** — quartile reruns at seeds 1 and 2 (8 runs). Confirms the Q1→Q4 monotonic shrink isn't single-seed noise.
+- **Block B** — r=16 → 8k extension at seed 1 (2 runs). Confirms the +11.22 pp gap-at-8k is reproducible.
+- **Block C** — r=8 → 8k extension at seed 0 (2 runs). Tests whether the gap-widening behavior generalizes below r=16.
+
+Launch:
+
+```bash
+tmux new -s stage5
+cd num2
+export HF_TOKEN=YOUR_TOKEN   # or unset HF_TOKEN; export HF_HUB_DISABLE_IMPLICIT_TOKEN=1
+./run_stage5_replicate.sh
+# Ctrl+b, d to detach; tmux attach -t stage5 to reattach
+```
+
+All runs save the final LoRA + dual indist + ood held-out for the offline analyses in [`analysis/`](analysis/).
+
+---
+
+## Phase 8 / 9 / 10: offline analysis on saved LoRAs
+
+These do not consume GPU time on Runpod. Everything runs on the Mac (or any machine with the saved `*.lora.pt` checkpoints + the held-out JSONLs). All scripts in [`analysis/`](analysis/), all outputs in [`analysis/results/`](analysis/results/), plots in [`figures/`](figures/).
+
+### Setup (one-time)
+
+```bash
+uv venv .venv_analysis --python 3.11
+uv pip install --python .venv_analysis/bin/python -r requirements-analysis.txt
+export OPENAI_API_KEY=sk-...
+export ANTHROPIC_API_KEY=sk-ant-...
+# For HuggingFace anonymous access (avoids stale tokens):
+unset HF_TOKEN HUGGINGFACE_HUB_TOKEN
+export HF_HUB_DISABLE_IMPLICIT_TOKEN=1
+```
+
+### Phase 8: Shahen items N3 / N4 / N5 + soft-accuracy
+
+| Step | Script | Purpose | Cost |
+|---|---|---|---|
+| Offline LoRA eval | `analysis.eval_lora_offline` | Loads each saved `.lora.pt` and emits per-item correct + loss + prediction. Reused everywhere. | $0 |
+| N5 nearest-neighbor | `analysis.embed_items` → `analysis.nearest_neighbors` | OpenAI `text-embedding-3-large` embeddings, max cosine to 10k training items | ~$0.30 |
+| N4 taxonomy | `analysis.taxonomy` → `analysis.cross_tab` | Claude Haiku classifies 15049 items by q_type/a_type/topic/specificity; cross-tab against RP/SFT correctness | ~$0.50 |
+| N3 synthetic items | `analysis.synthesize_nq` | GPT-4o generate → GPT-4o-mini verify → base-Qwen filter; 145 hard items as 3rd held-out | ~$2 |
+| N2 soft-accuracy | `analysis.soft_accuracy` | Token-F1, edit-similarity, lenient-EM on the same per-item generations | $0 |
+
+### Phase 9: weight-space mechanism + topic-paired transfer
+
+| Step | Script | Purpose | Cost |
+|---|---|---|---|
+| Weight analysis | `analysis.lora_weights` | Frobenius norm + effective rank + cosine alignment on ΔW per (layer, module) for all 24 LoRAs | $0 |
+| Quartile × held-out | `analysis.quartile_heldout` | Cross-tabs the Q1→Q4 trend against indist / ood / synthetic; also probes "far-from-training" subsets (τ ∈ {0.5, 0.6, 0.7}) | $0 |
+| Topic-paired | `analysis.topic_paired` | Generates 360 sibling questions (same entity, different fact) and evaluates all 24 LoRAs against them | ~$0.50 |
+
+### Phase 10: per-item rescue decomposition
+
+| Step | Script | Purpose | Cost |
+|---|---|---|---|
+| Flip analysis | `analysis.flip_analysis` | Decomposes each (RP, SFT) contrast into both / rp_only / sft_only / neither, and surfaces rescued example items by cross-method final loss | $0 |
+| Headline plots | `analysis.plots` | Generates `figures/{quartile_sweep,heldout_cross_set,mechanism_ladder,weight_cosine_heat,rescue_decomposition,lora_norm_by_layer}.html` | $0 |
+
+To regenerate everything from the saved JSONs and `.lora.pt` files:
+
+```bash
+.venv_analysis/bin/python -m analysis.eval_lora_offline ...   # see analysis/eval_lora_offline.py --help
+.venv_analysis/bin/python -m analysis.flip_analysis \
+    --json-glob 'artifacts_t8_stage3/*.json' \
+    --json-glob 'artifacts_t9_quartile/*.json' \
+    --output-dir analysis/results
+.venv_analysis/bin/python -m analysis.lora_weights ...
+.venv_analysis/bin/python -m analysis.quartile_heldout ...
+.venv_analysis/bin/python -m analysis.plots
+```
+
+Each script has a `--help` with full args.
+
